@@ -11,6 +11,7 @@
 	text-align: center;
 	transition: top .01s linear;
 	font-family: "Arial Black", sans-seri;
+	text-transform:uppercase;
 	text-shadow: 0 1px 0 rgba(0,0,0,0.15);
 }
 .btn-3d.red:hover    {background-color: #e74c3c;}
