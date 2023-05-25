@@ -2,12 +2,13 @@
 <html>
   <head>
     <title>This is the title of the webpage!</title>
-    <script src="https://kit.fontawesome.com/15d306d842.js" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+  </head>
   </head>
   <body>
     <p>This is an example paragraph. Anything in the <strong>body</strong> tag will appear on the page, just like this <strong>p</strong> tag and its contents.</p>
-    <button id="myButton"><i class="fas fa-sync"></i> Click me!</button>
+    <a href="#" id="myButton" class="btn-3d green"><i class="fas fa-sync"></i> Click me!</a>
     <script>
         document.getElementById('myButton').addEventListener('click', function() {
             alert('Button has been clicked!');
