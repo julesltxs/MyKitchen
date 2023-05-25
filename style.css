@@ -1,13 +1,4 @@
 
-/* Adds the Buttons Font */
-body {
-    font-family: "Arial", sans-serif;
-}
-
-#myButton {
-    font-family: "Arial Black", sans-seri
-}
-
 /* 3D Button */
 #myButton { 
 	position: relative;
