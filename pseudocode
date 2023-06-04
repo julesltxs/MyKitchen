@@ -1,0 +1,209 @@
+
+I have written a pseudocode for you down below with the Relevant Info, Definitions and Steps. Please use this to turn it into Javascript Code and walk me through where to put the code. For a quick summary, we are making a public integration for notion using the Notion API and USDA API to automatically fill out a foods nutritional information within notion database properties when the URLProperty is updated with a URL from a food item in USDAAPI, and you press the Sync Button on myWebsite
+-make sure i know what file i am supposed to be working in at all times
+-add comments within code explaining what each code does in simple english terms
+-Search within the Relevant Links, read everything and use as a large part of your knowledge basis when building this code. These links give details on the APIs themselves, and are basically cheat sheets to copy your code basis from. It will NOT work if we dont follow the rules of the APIs themselves
+-Im aware this is a very extensive Task, so please take your time and be thorough. You can respond in multiple messages if you Want. I already have all the API keys i need so do not include that in the process, just tell me where to put them
+-ask any questions, make any suggestions, do whatever you need
+
+RELEVANT LINKS FOR YOU=
+NotionAPI Link: https://developers.notion.com/reference/post-database-query
+NotionAPI Link2: https://developers.notion.com/docs
+NotionAPI Link3:https://developers.notion.com/docs/working-with-databases
+USDAAPI Link1: https://app.swaggerhub.com/apis/fdcnal/food-data_central_api/1.0.1#/FDC/postFoods
+USDAAPI Link2: https://fdc.nal.usda.gov/data-documentation.html
+USDAAPI Link3: https://fdc.nal.usda.gov/api-spec/fdc_api.html#/FDC/getFoods
+
+DEFINITIONS=
+* HTMLWebsite: My Github Website I am currently coding - https://julesltxs.github.io/MyKitchen/#
+* //: represents a comment from me to you and will be at the start and end of each comment
+* APICall: A Call from an API
+* URLProperty: Property in Items DB called "URL" that is a URL Type
+* CaloriesProperty: Property in Items DB called "Calories - G"
+* fdc_id: Number that represents a Food Item in USDA API, it is visible in the URL. EXAMPLE - https://fdc.nal.usda.gov/fdc-app.html#/food-details/1750340/nutrients, the numbers in the EXAMPLE URL represent the fdc_id, and will be in that same format for all URLProperties
+* FoodDetails: Nutritional Info extracted from fdc_ids from the USDA website using the USDAAPI
+* NutritionProperties: Properties in ItemsDB that represnt all of the Nutrient Properties. They are all simple number properties
+* measure_unit_id: The USDA property that expresses the unit used to measure SR legacy foods and survey (FNDDS) foods), a value of '9999' is assigned to this field.
+* amount: the name of the USDA property that expressed the number of measure units that comprise the measure_unit_id (e.g. if measure is 3 tsp, the amount is 3). Not defined for survey (FNDDS) foods (amount is instead embedded in portion description).
+* Amount: name of property in ItemsDB that represents the amount of the UnitProperty. It is a number property
+* MetricUnitDB: A Notion DB that has a page for each known unit of measurement. This is the ID for it: f8161afaa7bc445a9edd3841ba82b870
+* UnitProperty: Relation Property in Items DB in Notion called "Unit", it is a relation to the "MetricUnitDB"
+* ItemsDB: Main Database in notion that we are using to get this info. This is the ID - c1a43f14b5034f058b53d4fc7e789600
+* UnitIdMapping: How we map the measure_unit_id to the MetricUnitDBs Page IDs:
+const unitIdMapping = {
+  'g': '95e62303e7f5466aadeba5d026c622fb',
+  'kg': '6d5ac4539eee497eabd2c365eb698a1e',
+  'oz': '25d210a91e6c461f86ee4cc811165023',
+  'lb': '042a114789bb4cfcbe60c63f30443b81',
+  'ml': 'ea14fb6a025d4ec9a19feabe79a001eb',
+  'l': '6c7f39e64e0b46eaae65cffa2dd1e511',
+  'tsp': '1394e292a74b4bc2a42e3bba26437721',
+  'tbsp': '4f20c431717040df9c283984312e86bf',
+  'fl oz': '3688d2649bf940b28b4eade01783a74c',
+  'cup': '6e218dec224048a585c7bd16deeccc9f',
+  'pc': 'b4723cf60e4f4f149a132b9a6e84a6f2',
+  'whole': '10bff8bd48c84a5eadd7dbc30a642d0a'
+* nutrientMapping: An issue is, the the USDA DB has multiple NutrientIDs that represent the same nutrients and can change depending on the specific fdc_id. Therefore i have taken the time to go through all NutrientIDs and map them to my NotionProperties accordingly. 
+    This is that mapping, showing the NotionProperties first, followed by the NutrientIDs (from extracted fdc_ids), followed by the method we will use to calculate the end results. There are 2 method options. 'first' means you display first not empty and 'sum' means you display the sum of all nutrientNumbers. Also worth noting that the subAcids under the Omegas are NOT NotionProperties. The Omegas themselves are. So you must take first non empty NutrientID from each Subacid, THEN find sum of Omegas from those first non empty NutrientID (all are simple number properties in ItemsDB):
+    "Protein - G": { ids: [1003], method: 'first' },
+    "Carbs - G": { ids: [1005,2039,1050,1072], method: 'first' },
+    "Fats - G": { ids: [1085,1004], method: 'first' },
+    "Calories": { ids: [2048,2047,1008], method: 'first' },
+    "Vitamin A - IU": { ids: [1104], method: 'first' },
+    "Vitamin B1 - MG": { ids: [1165], method: 'first' },
+    "Vitamin B2 - MG": { ids: [1166], method: 'first' },
+    "Vitamin B3 - MG": { ids: [1167,1169], method: 'first' },
+    "Vitamin B5 - MG": { ids: [1170], method: 'first' },
+    "Vitamin B6 - MG": { ids: [1175,1174], method: 'first' },
+    "Vitamin B7 - MG": { ids: [1176], method: 'first' },
+    "Vitamin B8 - MG": { ids: [1181], method: 'first' },
+    "Vitamin B9": { ids: [1177,1187], method: 'first' },
+    "Vitamin B12 - UG": { ids: [1178], method: 'first' },
+    "Vitamin C - MG": { ids: [1162], method: 'first' },
+    "Vitamin D - MG": { ids: [2059,1114], method: 'sum' },
+    "Vitamin E - MG": { ids: [1109], method: 'first' },
+    "Vitamin K - UG": { ids: [1183,1184,1185], method: 'sum' },
+    "Sodium - MG": { ids: [1093], method: 'first' },
+    "Potassium - MG": { ids: [1092], method: 'first' },
+    "Cholesterol - MG": { ids: [1253], method: 'first' },
+    "Copper - MCG": { ids: [1098], method: 'first' },
+    "Magnesium - MG": { ids: [1090], method: 'first' },
+    "Manganese - MG": { ids: [1101], method: 'first' },
+    "Phosphorus - MG": { ids: [1091], method: 'first' },
+    "Selenuim - MG": { ids: [1103], method: 'first' },
+    "Zinc - MG": { ids: [1095], method: 'first' },
+    "Calcium - MG": { ids: [1087], method: 'first' },
+    "Fiber - G": { ids: [1079,2033], method: 'first' },
+    "Iron - MG": { ids: [1089], method: 'first' },
+    "Monounsaturated Fatty Acids - G": { ids: [1292,1327,1319], method: 'first' },
+    "Polyunsaturated Fatty Acids - G": { ids: [1293,1328,1320], method: 'first' },
+    "Trans Fatty Acids - G": { ids: [1257], method: 'first' },
+    "Saturated Fatty Acids - G" : { ids: [1258,1326,1318], method: 'first' },
+    "Bad Carbs - G": { ids: [1014,1011,1012,1075,1010,1013], method: 'sum' },
+    "Good Carbs - G": { ids: [1009,1082,1084,1065,1022,1021,1017,1403,1071,1015,1016,1019,1069], method: 'sum' },
+    "Water - G" : { ids: [1051], method: 'first' },
+    "Caffeine - MG" : { ids: [1057], method: 'first' },
+    "Choline - MG" : { ids: [1180], method: 'first' },
+    "Retinol - UG" : { ids: [1105], method: 'first' },
+    "Alcohol - G" : { ids: [1018], method: 'first' },
+    "Chromium - UG" : { ids: [1096], method: 'first' },
+    "Salt - MG" : { ids: [1149], method: 'first' },
+    "Vanadium - UG" : { ids: [1155], method: 'first' },
+    "Lutein - UG" : { ids: [1121], method: 'first' },
+    "Zeaxanthin - UG" : { ids: [1119], method: 'first' },
+    "Antioxidants - MG" : { ids: [2041,1201,1202,1203,1204,1207,1208,1368,1369,1365,1370,1372,1373,1380,1378,1205,1206,1209,1374,1376,1377,1379], method: 'sum' },
+    "Anti Inflammatories - MG" : { ids: [1205,1206,1209,1374,1376,1377,1379], method: 'sum' },
+    "Omega-3": {
+      subAcids: {
+        "Alpha-Linolenic Acid": [1404, 1270, 1409, 2018],
+        "Docosahexaenoic Acid": [1272, 2025],
+        "Docosapentaenoic Acid": [1280, 2024],
+        "Eicosapentaenoic Acid": [1278, 2023],
+        "Eicosatetraenoic Acid": [1407],
+        "Eicosatrienoic Acid": [1405]
+      },
+      method: 'sumSubAcids'
+    },
+    "Omega-6": {
+      subAcids: {
+        "Linoleic Acid": [1269, 1307, 1308, 1309, 1311, 1316, 2016],
+        "Gamma-Linolenic Acid": [1321],
+        "Arachidonic Acid": [1271, 1406, 1408, 2022],
+        "Eicosadienoic Acid": [1313, 2026]
+      },
+      method: 'sumSubAcids'
+    },
+    "Omega-7": {
+      subAcids: {
+        "Palmitoleic Acid": [1324]
+      },
+      method: 'sumSubAcids'
+    },
+    "Omega-9": {
+      subAcids: {
+        "Mead Acid": [1414]
+      },
+      method: 'sumSubAcids'
+    },
+
+STEPS
+1. WHEN Button is clicked in HTMLWebsite, START 
+2. RUN APICall to Notion to RETURN URLProperty 
+    IF URLProperty contains the following text: fdc.nal.usda.gov
+    AND CaloriesProperty is empty
+3. EXTRACT fdc_ids from URLProperties that qualify and RETURN fdc_ids with commas between them
+4. RUN APICall to RETURN 'full' FoodDetails from the fdc_ids 
+//Use this reference code from USDAAPIGuide as reference to make this part of the code: 
+'/v1/foods':
+post:
+      tags: 
+      - FDC
+      summary: Fetches details for multiple food items using input FDC IDs
+      description:  Retrieves a list of food items by a list of up to 20 FDC IDs. Optional format and nutrients can be specified. Invalid FDC ID's or ones that are not found are omitted and an empty set is returned if there are no matches.
+      operationId: postFoods
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsCriteria'
+      responses:
+        '200':
+          description: List of Food details matching specified FDC ID's. Invalid FDC ID's or ones that are not found are omitted.
+          content:
+            application/json:
+             schema:
+              type: array
+              items:
+                anyOf:
+                  - $ref: '#/components/schemas/AbridgedFoodItem'
+                  - $ref: '#/components/schemas/BrandedFoodItem'
+                  - $ref: '#/components/schemas/FoundationFoodItem'
+                  - $ref: '#/components/schemas/SRLegacyFoodItem'
+                  - $ref: '#/components/schemas/SurveyFoodItem'
+        '400':
+          description: bad input parameter
+            //
+5. FORMAT FoodDetails with nutrientMapping 
+        IF NutrientIDs from extracted FoodDetails Matches NutrientIDs in nutrientMapping, THEN return the relevant nutrientNumber from FoodDetails in place of NutrientIDs in nutrientMapping,
+        THEN use the method stated in nutrientMapping to return one number from those nutrientNumbers for each NotionProperty in nutrientMapping
+6. FORMAT the measure_unit_id to the appropriate MetricUnitDB page using the UnitIdMapping
+// EXAMPLE: IF the measure_unit_id is 'g' THEN update the appropriate fdc_id Food with the UnitProperty Relation using the corresponding MetricUnitDB Page ID, which would be '95e62303e7f5466aadeba5d026c622fb',//
+7. UPDATE the appropriate ItemsDB Pages with the Amount, appropriate UnitProperty, NutritionProperties, and Calories
+
+1.  WHEN Button is clicked in HTMLWebsite, START 
+2. QUERY Notion ItemsDB BUT filter 
+
+
+// Query ItemsDB Pages with Filters applied //
+
+const { Client } = require('@notionhq/client');
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
+
+(async () => {
+  const ItemsDBID = 'c1a43f14b5034f058b53d4fc7e789600' ;
+  const response = await notion.databases.query({
+    itemsdb_id: ItemsDBID ,
+      "filter": {
+    "and": [
+      {
+        "property": "URL",
+        "url": {
+          "contains": "fdc.nal.usda.gov"
+        }
+      },
+      {
+        "property": "Calories - G",
+        "number": {
+          "is_empty": "true"
+        }
+      }
+    ]}  
+})})};
+console.log(response);
+      
+
+// EXTRACT fdc_ids from URLProperties that qualify and RETURN fdc_ids with commas between them //
+
+https://api.notion.com/v1/databases/[database_id]/query?filter_properties=[property_id_1]
+
