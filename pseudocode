@@ -23,7 +23,7 @@ DEFINITIONS=
 * fdc_id: Number that represents a Food Item in USDA API, it is visible in the URL. EXAMPLE - https://fdc.nal.usda.gov/fdc-app.html#/food-details/1750340/nutrients, the numbers in the EXAMPLE URL represent the fdc_id, and will be in that same format for all URLProperties
 * FoodDetails: Nutritional Info extracted from fdc_ids from the USDA website using the USDAAPI
 * NutritionProperties: Properties in ItemsDB that represnt all of the Nutrient Properties. They are all simple number properties
-* measure_unit_id: The USDA property that expresses the unit used to measure SR legacy foods and survey (FNDDS) foods), a value of '9999' is assigned to this field.
+* measure_unit_id: The USDA property that expresses the unit used to measure SR legacy foods and survey (FNDDS) foods, a value of '9999' is assigned to this field.
 * amount: the name of the USDA property that expressed the number of measure units that comprise the measure_unit_id (e.g. if measure is 3 tsp, the amount is 3). Not defined for survey (FNDDS) foods (amount is instead embedded in portion description).
 * Amount: name of property in ItemsDB that represents the amount of the UnitProperty. It is a number property
 * MetricUnitDB: A Notion DB that has a page for each known unit of measurement. This is the ID for it: f8161afaa7bc445a9edd3841ba82b870
@@ -131,51 +131,8 @@ STEPS
 2. RUN APICall to Notion to RETURN URLProperty 
     IF URLProperty contains the following text: fdc.nal.usda.gov
     AND CaloriesProperty is empty
-3. EXTRACT fdc_ids from URLProperties that qualify and RETURN fdc_ids with commas between them
-4. RUN APICall to RETURN 'full' FoodDetails from the fdc_ids 
-//Use this reference code from USDAAPIGuide as reference to make this part of the code: 
-'/v1/foods':
-post:
-      tags: 
-      - FDC
-      summary: Fetches details for multiple food items using input FDC IDs
-      description:  Retrieves a list of food items by a list of up to 20 FDC IDs. Optional format and nutrients can be specified. Invalid FDC ID's or ones that are not found are omitted and an empty set is returned if there are no matches.
-      operationId: postFoods
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/FoodsCriteria'
-      responses:
-        '200':
-          description: List of Food details matching specified FDC ID's. Invalid FDC ID's or ones that are not found are omitted.
-          content:
-            application/json:
-             schema:
-              type: array
-              items:
-                anyOf:
-                  - $ref: '#/components/schemas/AbridgedFoodItem'
-                  - $ref: '#/components/schemas/BrandedFoodItem'
-                  - $ref: '#/components/schemas/FoundationFoodItem'
-                  - $ref: '#/components/schemas/SRLegacyFoodItem'
-                  - $ref: '#/components/schemas/SurveyFoodItem'
-        '400':
-          description: bad input parameter
-            //
-5. FORMAT FoodDetails with nutrientMapping 
-        IF NutrientIDs from extracted FoodDetails Matches NutrientIDs in nutrientMapping, THEN return the relevant nutrientNumber from FoodDetails in place of NutrientIDs in nutrientMapping,
-        THEN use the method stated in nutrientMapping to return one number from those nutrientNumbers for each NotionProperty in nutrientMapping
-6. FORMAT the measure_unit_id to the appropriate MetricUnitDB page using the UnitIdMapping
-// EXAMPLE: IF the measure_unit_id is 'g' THEN update the appropriate fdc_id Food with the UnitProperty Relation using the corresponding MetricUnitDB Page ID, which would be '95e62303e7f5466aadeba5d026c622fb',//
-7. UPDATE the appropriate ItemsDB Pages with the Amount, appropriate UnitProperty, NutritionProperties, and Calories
 
-1.  WHEN Button is clicked in HTMLWebsite, START 
-2. QUERY Notion ItemsDB BUT filter 
-
-
-// Query ItemsDB Pages with Filters applied //
+//This is what that would look like:
 
 const { Client } = require('@notionhq/client');
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
@@ -183,7 +140,7 @@ const notion = new Client({ auth: process.env.NOTION_API_KEY });
 (async () => {
   const ItemsDBID = 'c1a43f14b5034f058b53d4fc7e789600' ;
   const response = await notion.databases.query({
-    itemsdb_id: ItemsDBID ,
+    itemsdb_id: ItemsDBID,
       "filter": {
     "and": [
       {
@@ -199,11 +156,111 @@ const notion = new Client({ auth: process.env.NOTION_API_KEY });
         }
       }
     ]}  
-})})};
-console.log(response);
+});
+
+    let fdcIds = [];
+    for (let page of response.results) {
+        let url = page.properties.URL.url;
+        let fdcId = extractFdcId(url);
+        fdcIds.push(fdcId);
+    }
+
+    console.log(fdcIds.join(','));  
+})(); //
+
+3. EXTRACT fdc_ids from URLProperties that qualify and RETURN fdc_ids with commas between them
+
+//This is the Function for it:
+
+function extractFdcId(url) {
+    const regex = /\d+/; // This regular expression matches one or more digits
+    const match = url.match(regex);
+    return match ? match[0] : null; // Return the first match, or null if there were no matches
+} //
+
+4. RUN APICall to RETURN 'full' FoodDetails from the fdc_ids 
+//Use this reference code from USDAAPIGuide as reference to make this part of the code: 
+const fetch = require("node-fetch");
+'/v1/foods':
+post:
+      tags: 
+      - FDC
+      summary: Fetches details for multiple food items using input FDC IDs
+      description:  Retrieves a list of food items by a list of up to 20 FDC IDs. Optional format and nutrients can be specified. Invalid FDC ID's or ones that are not found are omitted and an empty set is returned if there are no matches.
+  REQUEST BODY EXAMPLE:
+      {
+  "fdcIds": [
+    534358,
+    373052,
+    616350
+  ]},
+
+  RESPONSE BODY EXAMPLE:
+  {
+    "dataType": "Branded",
+    "description": "NUT 'N BERRY MIX",
+    "fdcId": 534358,
+    "foodNutrients": [
+      {
+        "number": 303,
+        "name": "Iron, Fe",
+        "amount": 0.53,
+        "unitName": "mg",
+        "derivationCode": "LCCD",
+        "derivationDescription": "Calculated from a daily value percentage per serving size measure"
+      }
+    ],
+    "publicationDate": "4/1/2019",
+    "brandOwner": "Kar Nut Products Company",
+    "gtinUpc": "077034085228",
+    "ndbNumber": 7954,
+    "foodCode": "27415110"
+  },
+
+MORE INFO:
+
+      operationId: postFoods
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsCriteria'
+    
+          description: List of Food details matching specified FDC ID's. Invalid FDC ID's or ones that are not found are omitted.
+          content:
+            application/json:
+             schema:
+              type: array
+              items:
+                anyOf:
+                  - $ref: '#/components/schemas/AbridgedFoodItem'
+                  - $ref: '#/components/schemas/BrandedFoodItem'
+                  - $ref: '#/components/schemas/FoundationFoodItem'
+                  - $ref: '#/components/schemas/SRLegacyFoodItem'
+                  - $ref: '#/components/schemas/SurveyFoodItem'
+        '400':
+          description: bad input parameter
+
+          POST REQUEST EXAMPLE:
+curl -XPOST -H "Content-Type:application/json" -d '{"pageSize":25}' https://api.nal.usda.gov/fdc/v1/foods/list?api_key=DEMO_KEY
+curl -XPOST -H "Content-Type:application/json" -d '{"query":"Cheddar cheese"}' https://api.nal.usda.gov/fdc/v1/foods/search?api_key=DEMO_KEY
+curl -XPOST -H "Content-Type:application/json" -d "{\"query\":\"Cheddar cheese\"}" https://api.nal.usda.gov/fdc/v1/foods/search?api_key=DEMO_KEY
+            //
+
+5. FORMAT FoodDetails with nutrientMapping 
+        IF NutrientIDs from extracted FoodDetails Matches NutrientIDs in nutrientMapping, THEN return the relevant nutrientNumber from FoodDetails in place of NutrientIDs in nutrientMapping,
+        THEN use the method stated in nutrientMapping to return one number from those nutrientNumbers for each NotionProperty in nutrientMapping
+6. FORMAT the measure_unit_id to the appropriate MetricUnitDB page using the UnitIdMapping
+// EXAMPLE: IF the measure_unit_id is 'g' THEN update the appropriate fdc_id Food with the UnitProperty Relation using the corresponding MetricUnitDB Page ID, which would be '95e62303e7f5466aadeba5d026c622fb',//
+7. UPDATE the appropriate ItemsDB Pages with the Amount, appropriate UnitProperty, NutritionProperties, and Calories
+
+1.  WHEN Button is clicked in HTMLWebsite, START 
+2. QUERY Notion ItemsDB BUT filter 
+
+
+// Query ItemsDB Pages with Filters applied //
+
+
       
-
-// EXTRACT fdc_ids from URLProperties that qualify and RETURN fdc_ids with commas between them //
-
-https://api.notion.com/v1/databases/[database_id]/query?filter_properties=[property_id_1]
 
