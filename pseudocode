@@ -19,7 +19,7 @@ DEFINITIONS=
 * //: represents a comment from me to you and will be at the start and end of each comment
 * APICall: A Call from an API
 * URLProperty: Property in Items DB called "URL" that is a URL Type
-* CaloriesProperty: Property in Items DB called "Calories - G"
+* CaloriesProperty: Property in Items DB called "Calories"
 * fdc_id: Number that represents a Food Item in USDA API, it is visible in the URL. EXAMPLE - https://fdc.nal.usda.gov/fdc-app.html#/food-details/1750340/nutrients, the numbers in the EXAMPLE URL represent the fdc_id, and will be in that same format for all URLProperties
 * FoodDetails: Nutritional Info extracted from fdc_ids from the USDA website using the USDAAPI
 * NutritionProperties: Properties in ItemsDB that represnt all of the Nutrient Properties. They are all simple number properties
@@ -93,6 +93,16 @@ const unitIdMapping = {
     "Zeaxanthin - UG" : { ids: [1119], method: 'first' },
     "Antioxidants - MG" : { ids: [2041,1201,1202,1203,1204,1207,1208,1368,1369,1365,1370,1372,1373,1380,1378,1205,1206,1209,1374,1376,1377,1379], method: 'sum' },
     "Anti Inflammatories - MG" : { ids: [1205,1206,1209,1374,1376,1377,1379], method: 'sum' },
+    "Tryptophan - G" : {ids: [1210]},
+    "Threonine - G" : {ids: [1211]},
+    "Isoleucine - G" : {ids: [1212]},
+    "Leucine - G" : {ids: [1213]},
+    "Lysine - G" : {ids: [1214]},
+    "Methionine - G" : {ids: [1215]},
+    "Cystine - G" : {ids: [1216]},
+    "Phenylalanine - G" : {ids: [1217]},
+    "Valine - G" : {ids: [1219]},
+    "Histidine - G" : {ids: [12]},
     "Omega-3": {
       subAcids: {
         "Alpha-Linolenic Acid": [1404, 1270, 1409, 2018],
