@@ -1,3 +1,9 @@
+/* Reset default margins and padding */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
 /* Style the navbar */
 #navbar {
@@ -5,9 +11,11 @@
     background-color: #333;
     padding: 0 20px;
     align-items: center;
+    justify-content: space-between;
     width: 100%; /* Make sure navbar takes full width */
 }
 
+/* Logo to the left */
 #logo {
     color: #f2f2f2;
     font-size: 20px;
@@ -16,7 +24,6 @@
 /* Navbar links container */
 #nav-links {
     display: flex; /* Using flexbox for alignment */
-    margin-left: auto; /* Push nav-links to the right */
 }
 
 /* Individual links style */
@@ -34,17 +41,14 @@
 }
 
 /* Account button to the right */
-#account {
-    margin-left: 20px; /* Spacing between nav-links and account button */
-}
-
 #account a {
     color: #f2f2f2;
     text-align: center;
-    padding: 14px;
+    padding: 10px 20px;
     text-decoration: none;
     border: 1px solid #f2f2f2;
-    border-radius: 5px;
+    border-radius: 20px; /* rounded corners */
+    margin-left: 10px; /* spacing from other elements */
 }
 
 #account a:hover {
