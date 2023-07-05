@@ -11,7 +11,6 @@
     background-color: #333;
     padding: 0 20px;
     align-items: center;
-    justify-content: space-between;
     width: 100%; /* Make sure navbar takes full width */
 }
 
@@ -24,6 +23,7 @@
 /* Navbar links container */
 #nav-links {
     display: flex; /* Using flexbox for alignment */
+    margin-left: auto; /* Push nav-links to the right */
 }
 
 /* Individual links style */
