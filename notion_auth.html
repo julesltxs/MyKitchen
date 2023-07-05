@@ -1,0 +1,21 @@
+var urlParams = new URLSearchParams(window.location.search);
+var authCode = urlParams.get('code');
+
+fetch('https://api.notion.com/v1/oauth/token', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+        grant_type: 'authorization_code',
+        code: authCode,
+        redirect_uri: 'YOUR_REDIRECT_URI_HERE',
+        client_id: 'YOUR_CLIENT_ID_HERE',
+        client_secret: 'YOUR_CLIENT_SECRET_HERE'
+    })
+})
+.then(response => response.json())
+.then(data => {
+    var accessToken = data.access_token;
+    // Store the access token or provide it to the user
+});

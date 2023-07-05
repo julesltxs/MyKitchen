@@ -1,0 +1,33 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Products</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+  </head>
+  <body>
+    <h1>Our Products</h1>
+    
+    <div class="product">
+      <h2>Notion Template</h2>
+      <p>Description for the Notion Template.</p>
+      <button class="buy-button" data-product-id="notion-template">Buy Now</button>
+    </div>
+
+    <div class="product">
+      <h2>Integration Add-On</h2>
+      <p>Description for the Integration Add-On.</p>
+      <button class="buy-button" data-product-id="integration-addon">Buy Now</button>
+    </div>
+
+    <div class="product">
+      <h2>Bundle</h2>
+      <p>Description for the Bundle.</p>
+      <button class="buy-button" data-product-id="bundle">Buy Now</button>
+    </div>
+
+    <!-- Include Stripe.js -->
+    <script src="https://js.stripe.com/v3/"></script>
+    <!-- Include your JavaScript file -->
+    <script src="app.js"></script>
+  </body>
+</html>

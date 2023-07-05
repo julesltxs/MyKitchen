@@ -146,6 +146,8 @@ let unitIdMapping = {
   'whole': '10bff8bd48c84a5eadd7dbc30a642d0a',
 };
 
+
+
 // Function to extract fdc_id from URL
 function extractFdcId(url) {
   const regex = /\d+/; // This regular expression matches one or more digits
@@ -162,11 +164,34 @@ async function fetchFoodDetails(fdcIds, pages, propertyIdMapping) {
     },
     body: JSON.stringify({ fdcIds: fdcIds })
   });
-
+  
   let amountPropName = 'Amount';
   let unitPropName = 'Unit';
-  
+
   const foodDetails = await response.json();
+  
+  // Loop through each food item in foodDetails
+  for (let foodItem of foodDetails) {
+    
+    // Loop through food nutrients
+    for (let nutrient of foodItem.foodNutrients) {
+      
+      // If nutrient ID is in propertyIdMapping, set the amountPropName and unitPropName
+      if (propertyIdMapping.hasOwnProperty(nutrient.nutrient.id)) {
+        let mappedNames = propertyIdMapping[nutrient.nutrient.id];
+        amountPropName = mappedNames.amount;
+        unitPropName = mappedNames.unit;
+        
+        // Here, you can also assign values to the foodItem object
+        foodItem[amountPropName] = nutrient.amount;
+        foodItem[unitPropName] = nutrient.nutrient.unitName;
+      }
+    }
+  }
+  
+  // Return the modified foodDetails
+  return foodDetails;
+}
   
   const processedFdcIds = new Set(); // We will store processed fdcIds here
   let pagesData = []; // Here we declare the array to store our data
@@ -245,7 +270,6 @@ async function fetchFoodDetails(fdcIds, pages, propertyIdMapping) {
         console.log(`Notion Page ID: ${notionId}`); // Display Notion Page ID
         mappedUnitId = unitIdMapping[unit];
         console.log(`Notion Unit Page ID: '${mappedUnitId}`);
-
       
         break;
       
@@ -327,9 +351,8 @@ for (let nutrientName in nutrientMapping) {
 
   // Return pagesData array at the end of your fetchFoodDetails function
   return pagesData;
-}
 
-// Define the async function
+
 async function syncFunction() {
   const ItemsDBID = 'c1a43f14b5034f058b53d4fc7e789600';
 
@@ -359,9 +382,10 @@ async function syncFunction() {
       }
     })
   });
-  
+
   const data = await response.json();
-  
+  console.log(data);
+
   let fdcIds = [];
   let pages = [];
   for (let page of data.results) {
@@ -369,22 +393,31 @@ async function syncFunction() {
     let fdcId = extractFdcId(url);
     fdcIds.push(fdcId);
 
-      // Store property IDs in addition to the page ID
-      for (let propertyName in page.properties) {
-        if (!propertyIdMapping[propertyName]) {
-          propertyIdMapping[propertyName] = page.properties[propertyName].id;
-        }
+    // Store property IDs in addition to the page ID
+    for (let propertyName in page.properties) {
+      if (!propertyIdMapping[propertyName]) {
+        propertyIdMapping[propertyName] = page.properties[propertyName].id;
       }
-    
-          // Add property ID mapping to page object
+    }
+
+    // Add property ID mapping to page object
     page.propertyIdMapping = propertyIdMapping;
-    
+
     pages.push(page); // Store the page
   }
 
   console.log(`Fetching details for ${fdcIds.length} items`);
-  await fetchFoodDetails(fdcIds, pages, propertyIdMapping); // Pass the pages to fetchFoodDetails
+
+  // Fetch food details in chunks of 20
+  const chunkSize = 20;
+  for (let i = 0; i < fdcIds.length; i += chunkSize) {
+    const fdcIdsChunk = fdcIds.slice(i, i + chunkSize);
+    const pagesChunk = pages.slice(i, i + chunkSize);
+    console.log(`Fetching details for items ${i + 1} to ${i + fdcIdsChunk.length}`);
+    await fetchFoodDetails(fdcIdsChunk, pagesChunk, propertyIdMapping);
+  }
 }
+
 
 async function updateNotionDatabase(pageData, propertyIdMapping) {
   // Initialize nutrientProperties as an empty object

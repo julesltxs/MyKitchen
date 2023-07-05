@@ -5,11 +5,52 @@
     <link rel="stylesheet" type="text/css" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
   </head>
-  </head>
   <body>
-    <p>This is an example paragraph. Anything in the <strong>body</strong> tag will appear on the page, just like this <strong>p</strong> tag and its contents.</p>
-    <a href="#" id="myButton" class="btn-3d green"><i class="fas fa-sync"></i> SYNC</a>
-    <script src="script.js"></script>
+    <!-- Navigation bar -->
+    <nav id="navbar">
+      <ul>
+        <li><a href="#about-section">About</a></li>
+        <li><a href="#products-section">Products</a></li>
+        <li><a href="#contact-section">Contact</a></li>
+      </ul>
+    </nav>
+    
+    <!-- About Section -->
+    <div id="about-section">
+      <h2>About Us</h2>
+      <p>This is the About section. Here you can provide information about your company or yourself.</p>
+    </div>
+
+    <!-- Products Section -->
+    <div id="products-section">
+      <h2>Our Products</h2>
+      <p>This section is dedicated to showcasing your products.</p>
+    </div>
+
+    <!-- Contact Section -->
+    <div id="contact-section">
+      <h2>Contact Us</h2>
+      <p>Let visitors know how they can get in touch with you.</p>
+    </div>
+
+    <!-- Existing content -->
+    <p>This is an example paragraph...</p>
+    <!-- ... rest of your content ... -->
+
+    <!-- Add jQuery for smooth scrolling -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      // Smooth scrolling
+      $('a[href*="#"]').on('click', function (e) {
+        e.preventDefault();
+        $('html, body').animate(
+          {
+            scrollTop: $($(this).attr('href')).offset().top,
+          },
+          500,
+          'linear'
+        );
+      });
+    </script>
   </body>
 </html>
-
