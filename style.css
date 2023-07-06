@@ -41,7 +41,7 @@
 }
 
 /* Account button to the right */
-#account a {
+#get_access a {
     color: #f2f2f2;
     text-align: center;
     padding: 10px 20px;
@@ -51,7 +51,7 @@
     margin-left: 10px; /* spacing from other elements */
 }
 
-#account a:hover {
+#get_access a:hover {
     background-color: #f2f2f2;
     color: #333;
 }
