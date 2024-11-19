@@ -31,7 +31,6 @@ async function fetchDatabasePropertyIDs() {
 
 fetchDatabasePropertyIDs();
 
-
 // Define your Nutrient Mapping
 let nutrientMapping = {
   "Protein - G": { ids: [1003], method: 'first' },
@@ -82,16 +81,18 @@ let nutrientMapping = {
   "Zeaxanthin - UG" : { ids: [1119], method: 'first' },
   "Antioxidants - MG" : { ids: [2041,1201,1202,1203,1204,1207,1208,1368,1369,1365,1370,1372,1373,1380,1378,1205,1206,1209,1374,1376,1377,1379], method: 'sum' },
   "Anti Inflammatories - MG" : { ids: [1205,1206,1209,1374,1376,1377,1379], method: 'sum' },
-  "Tryptophan - G" : {ids: [1210]},
-  "Threonine - G" : {ids: [1211]},
-  "Isoleucine - G" : {ids: [1212]},
-  "Leucine - G" : {ids: [1213]},
-  "Lysine - G" : {ids: [1214]},
-  "Methionine - G" : {ids: [1215]},
+  "Tryptophan - G (AA)" : {ids: [1210]},
+  "Threonine - G (AA)" : {ids: [1211]},
+  "Isoleucine - G (AA)" : {ids: [1212]},
+  "Leucine - G (AA)" : {ids: [1213]},
+  "Lysine - G (AA)" : {ids: [1214]},
+  "Methionine - G (AA)" : {ids: [1215]},
   "Cystine - G" : {ids: [1216]},
-  "Phenylalanine - G" : {ids: [1217]},
-  "Valine - G" : {ids: [1219]},
-  "Histidine - G" : {ids: [1221]},
+  "Phenylalanine - G (AA)" : {ids: [1217]},
+  "Valine - G (AA)" : {ids: [1219]},
+  "Histidine - G (AA)" : {ids: [1221]},
+  "Zeaxanthin - UG" : {ids: [1119]},
+  "Lutein - UG" : {ids: [1121]},
   "Omega-3": {
     subAcids: {
       "Alpha-Linolenic Acid": [1404, 1270, 1409, 2018],
@@ -135,17 +136,17 @@ let unitIdMapping = {
   'oz': '25d210a91e6c461f86ee4cc811165023',
   'lb': '042a114789bb4cfcbe60c63f30443b81',
   'ml': 'ea14fb6a025d4ec9a19feabe79a001eb',
-  'mililiter': 'ea14fb6a025d4ec9a19feabe79a001eb',
   'l': '6c7f39e64e0b46eaae65cffa2dd1e511',
   'tsp': '1394e292a74b4bc2a42e3bba26437721',
   'tbsp': '4f20c431717040df9c283984312e86bf',
-  'tablespoon': '4f20c431717040df9c283984312e86bf',
   'fl oz': '3688d2649bf940b28b4eade01783a74c',
   'cup': '6e218dec224048a585c7bd16deeccc9f',
   'pc': 'b4723cf60e4f4f149a132b9a6e84a6f2',
   'whole': '10bff8bd48c84a5eadd7dbc30a642d0a',
 };
 
+// New errorPages array to keep track of pages where errors occur
+let errorPages = [];
 
 
 // Function to extract fdc_id from URL
@@ -155,8 +156,9 @@ function extractFdcId(url) {
   return match ? parseInt(match[0]) : null; // Return the first match, or null if there were no matches
 }
 
-//Function that fetches Food Details from Food ID using USDA API
+//Function that fetches Food Details from Food ID
 async function fetchFoodDetails(fdcIds, pages, propertyIdMapping) {
+  try {
   const response = await fetch(`https://api.nal.usda.gov/fdc/v1/foods?api_key=${process.env.USDA_API_KEY}`, {
     method: 'POST',
     headers: {
@@ -164,35 +166,21 @@ async function fetchFoodDetails(fdcIds, pages, propertyIdMapping) {
     },
     body: JSON.stringify({ fdcIds: fdcIds })
   });
-  
+
   let amountPropName = 'Amount';
   let unitPropName = 'Unit';
-
   const foodDetails = await response.json();
-  
-  // Loop through each food item in foodDetails
-  for (let foodItem of foodDetails) {
-    
-    // Loop through food nutrients
-    for (let nutrient of foodItem.foodNutrients) {
-      
-      // If nutrient ID is in propertyIdMapping, set the amountPropName and unitPropName
-      if (propertyIdMapping.hasOwnProperty(nutrient.nutrient.id)) {
-        let mappedNames = propertyIdMapping[nutrient.nutrient.id];
-        amountPropName = mappedNames.amount;
-        unitPropName = mappedNames.unit;
-        
-        // Here, you can also assign values to the foodItem object
-        foodItem[amountPropName] = nutrient.amount;
-        foodItem[unitPropName] = nutrient.nutrient.unitName;
-      }
-    }
-  }
-  
-  // Return the modified foodDetails
-  return foodDetails;
+} catch (error) {
+  const failedItem = pages.find(p => fdcIds.includes(extractFdcId(p.properties.URL.url)));
+  console.error(`Failed to fetch data for fdcId: ${failedItem.properties.Name.title[0].plain_text}`);
+  errorPages.push({ 
+    fdcIds, 
+    name: failedItem.properties.Name.title[0].plain_text, 
+    error: error.message
+  }); // store the error message and related fdcIds
+  return; // skip to next iteration
 }
-  
+
   const processedFdcIds = new Set(); // We will store processed fdcIds here
   let pagesData = []; // Here we declare the array to store our data
 
@@ -218,14 +206,7 @@ async function fetchFoodDetails(fdcIds, pages, propertyIdMapping) {
     switch (food.dataType) {
       case 'Branded':
         category = food.brandedFoodCategory || 'Unknown';
-     // Set amount and unit
-     if (food.servingSizeUnit && (food.servingSizeUnit.toLowerCase() === 'ml' || food.servingSizeUnit.toLowerCase() === 'mililiter')) {
-      amount = 100; // You can set this to any default value for 'ml'
-      unit = 'ml';
-  } else {
-      amount = 100; // Default value for grams
-      unit = 'g';
-  }
+        amount = food.servingSize || 'Unknown';
         unit = food.servingSizeUnit || 'Unknown';
         let brandOwner = food.brandOwner || 'Unknown';
         let ingredients = food.ingredients || 'Unknown';
@@ -255,21 +236,14 @@ async function fetchFoodDetails(fdcIds, pages, propertyIdMapping) {
 
       case 'Survey (FNDDS)':
         category = (food.wweiaFoodCategory && food.wweiaFoodCategory.description) || 'Unknown';
-        amount = 100;
-
-        if (food.foodPortions && food.foodPortions[0] && food.foodPortions[0].portionDescription) {
-            let amountMatch = food.foodPortions[0].portionDescription.match(/\d+/);
-            
-            if (amountMatch && amountMatch.length > 0) {
-                amount = parseFloat(amountMatch[0]);
-            }
-        };
-        unit = 'g'
+        amount = (food.foodPortions && food.foodPortions[0] && parseFloat(food.foodPortions[0].portionDescription.match(/\d+/)[0])) || 'Unknown'; // Extracting the amount from the portion description
+        unit = (food.foodPortions && food.foodPortions[0] && food.foodPortions[0].portionDescription.match(/[a-zA-Z]+/)[0]) || 'Unknown'; // Extracting the unit from the portion description
         console.log('\n'); // Extra line
         console.log(`fdcId: ${food.fdcId}, description: '${food.description}', dataType: '${food.dataType}', category: '${category}', amount: ${amount}, unit: '${unit}'`);
         console.log(`Notion Page ID: ${notionId}`); // Display Notion Page ID
         mappedUnitId = unitIdMapping[unit];
         console.log(`Notion Unit Page ID: '${mappedUnitId}`);
+
       
         break;
       
@@ -331,16 +305,13 @@ for (let nutrientName in nutrientMapping) {
   }
 }
 
+    
     console.log(mappedNutrients);
     pagesData.push({
       notionId: notionId,
       mappedUnitId: mappedUnitId,
       mappedNutrients: mappedNutrients,
-      amount: amount,
-      ingredients: food.ingredients, 
-      description: food.description,   
-      dataType: food.dataType  ,
-      brandOwner: food.dataType === 'Branded' ? (food.brandOwner || 'Unknown').replace(',', '') : null,
+      amount: amount
     });
   });
   
@@ -351,8 +322,9 @@ for (let nutrientName in nutrientMapping) {
 
   // Return pagesData array at the end of your fetchFoodDetails function
   return pagesData;
+}
 
-
+// Define the async function
 async function syncFunction() {
   const ItemsDBID = 'c1a43f14b5034f058b53d4fc7e789600';
 
@@ -360,7 +332,7 @@ async function syncFunction() {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${process.env.NOTION_API_KEY}`,
-      'Notion-Version': '2022-06-28',
+      'Notion-Version': '2021-05-13',
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
@@ -382,9 +354,9 @@ async function syncFunction() {
       }
     })
   });
-
+  
   const data = await response.json();
-  console.log(data);
+  const batchSize = 10;
 
   let fdcIds = [];
   let pages = [];
@@ -393,31 +365,70 @@ async function syncFunction() {
     let fdcId = extractFdcId(url);
     fdcIds.push(fdcId);
 
-    // Store property IDs in addition to the page ID
-    for (let propertyName in page.properties) {
-      if (!propertyIdMapping[propertyName]) {
-        propertyIdMapping[propertyName] = page.properties[propertyName].id;
-      }
+
+    console.log("\n\nThe following pages caused errors:");
+    for (let errorPage of errorPages) {
+      console.log(`FDC Ids: ${errorPage.fdcIds.join(', ')}, Error: ${errorPage.error}`);
     }
-
-    // Add property ID mapping to page object
+  
+      let successCount = 0;
+      for (let i = 0; i < pages.length; i += batchSize) {
+        const batchPages = pages.slice(i, i + batchSize);
+        const batchFdcIds = batchPages.map(page => extractFdcId(page.properties.URL.url));
+        console.log(`Fetching details for ${batchFdcIds.length} items`);
+        const pagesData = await fetchFoodDetails(batchFdcIds, batchPages, propertyIdMapping);
+        successCount += pagesData.length; // Count successful updates
+      }
+    
+      console.log(`\nUpdating ${pages.length} Items`);
+      console.log(`${successCount} Items were Updated`);
+      if (errorPages.length > 0) {
+        console.log(`${errorPages.length} Item(s) Failed to Update:`);
+        for (let errorPage of errorPages) {
+          console.log(`${errorPage.name} - ${errorPage.error}`);
+        }
+      }
+    
+    
+      // Store property IDs in addition to the page ID
+      for (let propertyName in page.properties) {
+        if (!propertyIdMapping[propertyName]) {
+          propertyIdMapping[propertyName] = page.properties[propertyName].id;
+        }
+      }
+    
+          // Add property ID mapping to page object
     page.propertyIdMapping = propertyIdMapping;
-
+    
     pages.push(page); // Store the page
   }
 
-  console.log(`Fetching details for ${fdcIds.length} items`);
-
-  // Fetch food details in chunks of 20
-  const chunkSize = 20;
+  // Chunk fdcIds into smaller arrays of max. 20 items each
+  let chunkSize = 20;
+  let chunks = [];
   for (let i = 0; i < fdcIds.length; i += chunkSize) {
-    const fdcIdsChunk = fdcIds.slice(i, i + chunkSize);
-    const pagesChunk = pages.slice(i, i + chunkSize);
-    console.log(`Fetching details for items ${i + 1} to ${i + fdcIdsChunk.length}`);
-    await fetchFoodDetails(fdcIdsChunk, pagesChunk, propertyIdMapping);
+    chunks.push(fdcIds.slice(i, i + chunkSize));
+  }
+
+  // Now call fetchFoodDetails for each chunk
+  for (let chunk of chunks) {
+    await fetchFoodDetails(chunk, pages, propertyIdMapping);
   }
 }
 
+async function fetchFoodDetails(fdcIds, pages, propertyIdMapping) {
+  // Fetch details for each fdcId in the chunk
+  const response = await fetch(`https://api.nal.usda.gov/fdc/v1/foods?api_key=${process.env.USDA_API_KEY}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ fdcIds: fdcIds })
+  });
+
+  console.log(`Fetching details for ${fdcIds.length} items`);
+  await fetchFoodDetails(fdcIds, pages, propertyIdMapping); // Pass the pages to fetchFoodDetails
+}
 
 async function updateNotionDatabase(pageData, propertyIdMapping) {
   // Initialize nutrientProperties as an empty object
@@ -460,54 +471,18 @@ async function updateNotionDatabase(pageData, propertyIdMapping) {
         'Amount': {
           type: "number",
           number: pageData.amount
-        },
-        'Brand': {  
-          type: "select",
-          select: {
-            name: pageData.brandOwner || 'N/A',
-          }
-        },
-          'USDA Name': {
-            type: "rich_text",
-            rich_text: [
-              {
-                type: "text",
-                text: {
-                  content: pageData.description
-                }
-              }
-            ]
-          },
-          'Data Type': {
-            type: "select",
-            select: {
-              name: pageData.dataType
-            }
-          },
-            'Ingredients': {
-              type: "rich_text",
-              rich_text: [
-              {
-                  type: "text",
-                  text: {
-                    content: pageData.ingredients || 'N/A'
-                  }
-                }
-              ]
-          }
         }
-      })
-    });
+      }
+    })
+  });
 
-    const responseBody = await response.json();
-    if (response.status !== 200) {
-      console.error('Error updating Notion page:', responseBody);
-    } else {
-      console.log('Page updated successfully:', responseBody);
-    }
-  }
+  const data = await response.json();
+  console.log("Update response:", data);  // Log the response here
+  return data;
+}
   
   
 
 // Call the function
 syncFunction();
+
