@@ -149,14 +149,14 @@ let unitIdMapping = {
 let errorPages = [];
 
 
-// Function to extract fdc_id from URL
+// EXTRACT fdc_id from URL
 function extractFdcId(url) {
   const regex = /\d+/; // This regular expression matches one or more digits
   const match = url.match(regex);
   return match ? parseInt(match[0]) : null; // Return the first match, or null if there were no matches
 }
 
-//Function that fetches Food Details from Food ID
+//Function FETCH Food Details from Food ID
 async function fetchFoodDetails(fdcIds, pages, propertyIdMapping) {
   try {
   const response = await fetch(`https://api.nal.usda.gov/fdc/v1/foods?api_key=${process.env.USDA_API_KEY}`, {
